@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "botvault",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "botvault-db",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BOT_FILES",
+      "bucket_name": "botvault-files"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ]
+}
