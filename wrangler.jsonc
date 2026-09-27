@@ -10,11 +10,5 @@
   },
   "observability": {
     "enabled": true
-  },
-  "r2_buckets": [
-    {
-      "binding": "BOT_FILES",
-      "bucket_name": "botvault-files"
-    }
-  ]
+  }
 }
