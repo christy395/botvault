@@ -4,9 +4,6 @@
   "compatibility_date": "2026-09-27",
   "compatibility_flags": ["nodejs_compat"],
   "main": ".open-next/worker.js",
-  "build": {
-    "command": "npx opennextjs-cloudflare build"
-  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
