@@ -11,13 +11,6 @@
   "observability": {
     "enabled": true
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "botvault-db",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
-    }
-  ],
   "r2_buckets": [
     {
       "binding": "BOT_FILES",
