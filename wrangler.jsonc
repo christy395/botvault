@@ -23,11 +23,5 @@
       "binding": "BOT_FILES",
       "bucket_name": "botvault-files"
     }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "SESSIONS",
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
-    }
   ]
 }
