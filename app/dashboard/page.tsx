@@ -23,7 +23,7 @@ export default function Dashboard() {
         <a className="brand" href="/">BOT<span>VAULT</span></a>
         <div className="dashboardNav">
           <a href="/">Home</a>
-          <span className="dashboardUser">Free Forever</span>
+          <a className="dashboardUser" href="/dashboard/commands">Commands</a><span className="dashboardUser">Free Forever</span>
         </div>
       </nav>
 
@@ -119,7 +119,7 @@ export default function Dashboard() {
             <h2>Connect your first hosting node.</h2>
             <p>Cloudflare hosts the BotVault website and edge layer. Long-running Discord bots need a separate hosting machine or node running the BotVault controller and isolated bot containers.</p>
           </div>
-          <a className="secondary" href="/">Back to BotVault</a>
+          <div className="dashboardActions"><a className="secondary" href="/dashboard/commands">Command Builder</a><a className="secondary" href="/">Back to BotVault</a></div>
         </section>
       </section>
     </main>
