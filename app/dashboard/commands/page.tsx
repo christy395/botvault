@@ -10,16 +10,6 @@ type BotCommand = {
   language: "python" | "javascript";
 };
 
-const starterCommands: BotCommand[] = [
-  {
-    id: "ping",
-    name: "ping",
-    description: "Check the bot latency.",
-    language: "python",
-    code: 'import discord\nfrom discord import app_commands\n\n@tree.command(name="ping", description="Check bot latency")\nasync def ping(interaction: discord.Interaction):\n    await interaction.response.send_message(f"Pong! {round(bot.latency * 1000)}ms")',
-  },
-];
-
 export default function CommandsPage() {
   const [commands, setCommands] = useState<BotCommand[]>([]);
   const [selected, setSelected] = useState<BotCommand | null>(null);
@@ -33,9 +23,15 @@ export default function CommandsPage() {
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem("botvault.commands");
-      setCommands(saved ? JSON.parse(saved) : starterCommands);
+      const parsed: BotCommand[] = saved ? JSON.parse(saved) : [];
+      const withoutDefaultPing = Array.isArray(parsed)
+        ? parsed.filter((command) => command?.name?.toLowerCase() !== "ping")
+        : [];
+      setCommands(withoutDefaultPing);
+      window.localStorage.setItem("botvault.commands", JSON.stringify(withoutDefaultPing));
     } catch {
-      setCommands(starterCommands);
+      setCommands([]);
+      window.localStorage.setItem("botvault.commands", "[]");
     }
   }, []);
 
