@@ -8,7 +8,6 @@ export async function POST(request: Request) {
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
 
-    // Validate normal email addresses and require a secure minimum password length.
     if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) {
       return NextResponse.json(
         { error: "Use a valid email and a password with at least 8 characters." },
@@ -17,12 +16,21 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const existing = await db.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+
+    const existing = await db
+      .prepare("SELECT id FROM users WHERE email = ?")
+      .bind(email)
+      .first();
+
     if (existing) {
-      return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
+      return NextResponse.json(
+        { error: "An account with that email already exists." },
+        { status: 409 }
+      );
     }
 
     const userId = crypto.randomUUID();
+
     await db
       .prepare("INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)")
       .bind(userId, email, await hashPassword(password))
@@ -33,10 +41,15 @@ export async function POST(request: Request) {
     response.headers.set("Set-Cookie", sessionCookie(session.id, session.expires));
     return response;
   } catch (error) {
-    console.error("register", error);
+    console.error("register error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+
     return NextResponse.json(
-      { error: "Database is not configured yet. Create and bind the BotVault D1 database." },
-      { status: 503 }
+      {
+        error: "Registration failed",
+        details: message
+      },
+      { status: 500 }
     );
   }
 }
