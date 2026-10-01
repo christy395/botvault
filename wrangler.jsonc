@@ -8,6 +8,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "botvault-db",
+      "database_id": "7d7e5d9e-c7ad-4bab-800a-33c766bd01e9"
+    }
+  ],
   "observability": {
     "enabled": true
   }
