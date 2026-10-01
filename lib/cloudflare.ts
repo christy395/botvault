@@ -47,24 +47,38 @@ async function ensureSchema(db: D1Database) {
     db.prepare("CREATE INDEX IF NOT EXISTS idx_bots_user_id ON bots(user_id)")
   ]);
 
-  // Upgrade an existing BotVault D1 database without deleting current bot records.
   for (const statement of [
     "ALTER TABLE bots ADD COLUMN connection_status TEXT NOT NULL DEFAULT 'disconnected'",
     "ALTER TABLE bots ADD COLUMN discord_bot_id TEXT",
     "ALTER TABLE bots ADD COLUMN discord_username TEXT",
-    "ALTER TABLE bots ADD COLUMN discord_avatar TEXT"
+    "ALTER TABLE bots ADD COLUMN discord_avatar TEXT",
+    "ALTER TABLE bots ADD COLUMN token_ciphertext TEXT"
   ]) {
     try {
       await db.prepare(statement).run();
     } catch {
-      // Column already exists on upgraded databases.
+      // Column already exists.
     }
   }
 }
 
-export async function getCloudflareEnv() {
+export async function getCloudflareEnv(): Promise<BotVaultEnv> {
   const { env } = await getCloudflareContext({ async: true });
-  return env as unknown as BotVaultEnv;
+  const runtimeEnv = env as unknown as BotVaultEnv;
+
+  // OpenNext/Cloudflare normally exposes secrets on the env binding.
+  // With nodejs_compat, Cloudflare also exposes Worker secrets through process.env.
+  // Use both so the BotVault API works across OpenNext runtime versions.
+  const processEnv = (globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> };
+  }).process?.env;
+
+  return {
+    ...runtimeEnv,
+    BOT_TOKEN_ENCRYPTION_KEY:
+      runtimeEnv.BOT_TOKEN_ENCRYPTION_KEY ||
+      processEnv?.BOT_TOKEN_ENCRYPTION_KEY
+  };
 }
 
 export async function getDb() {
