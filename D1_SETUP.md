@@ -11,7 +11,8 @@ BotVault now has account sessions and persistent bot records backed by Cloudflar
 - /dashboard loads the signed-in user's bots from D1.
 - Leaving the website does not remove a bot.
 - /login and /register are available.
-- The bot API never returns stored bot credentials.
+- The bot API never returns stored Discord bot credentials.
+- The New Bot flow validates a Discord bot token with Discord and stores the token encrypted.
 
 ## 1. Create the D1 database
 
@@ -33,26 +34,48 @@ Use variable name DB and select botvault-db.
 
 If you use Wrangler, add the generated binding to wrangler.jsonc. Do not commit a fake database ID.
 
-## 3. Create the tables
+## 3. Create/update the tables
 
-Run:
+For a new database run:
 
 npx wrangler d1 execute botvault-db --remote --file=./migrations/0001_auth_bots.sql
 
-The migration creates users, sessions, and bots tables plus indexes.
+For an existing BotVault database, also apply:
 
-## 4. Deploy
+npx wrangler d1 execute botvault-db --remote --file=./migrations/0002_bot_connections.sql
 
-After the binding exists and the migration has run, run:
+The application also checks for the new columns automatically when D1 is first accessed.
 
-bun run deploy
+## 4. Configure Discord token encryption
 
-The Worker should show a D1 binding named DB.
+The New Bot connection flow needs a Cloudflare Worker secret named:
 
-## 5. Test
+BOT_TOKEN_ENCRYPTION_KEY
 
-Open /register, create an account, then use /dashboard. Create a bot, log out, sign back in, and the bot should still be listed.
+Set it with Wrangler:
 
-The D1 record is the source of truth. Do not move account ownership back to browser localStorage.
+npx wrangler secret put BOT_TOKEN_ENCRYPTION_KEY
 
-Actual Discord bot execution is separate: the VPS/hosting node will run the long-lived process, while Cloudflare stores account and bot metadata and provides the web/API layer.
+When Wrangler asks for the value, enter a long random secret. Never commit it to GitHub and never paste it into chat.
+
+Without this secret, BotVault will not store Discord tokens.
+
+## 5. Deploy
+
+After the binding, migration, and secret exist, run:
+
+npm run deploy
+
+## 6. Test the New Bot flow
+
+Open /dashboard and click **+ New bot**.
+
+The modal asks for:
+- Bot name
+- Discord bot token
+
+BotVault calls Discord to validate the token. It then stores the token encrypted and never displays it again in the bot profile or normal bot API responses.
+
+Each bot has its own profile at /dashboard/bots/<bot-id>. That profile shows only the selected bot, not all bots in the account.
+
+Actual Discord bot execution is separate: the VPS/hosting node will run the long-lived process, while Cloudflare stores account and bot metadata and provides the web/API layer. A successful connection at this stage means the Discord bot credentials were validated and stored securely; it does not claim that the bot is running 24/7 without a hosting node.
