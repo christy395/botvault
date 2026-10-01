@@ -1,7 +1,10 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
 
-type BotVaultEnv = { DB?: D1Database };
+type BotVaultEnv = {
+  DB?: D1Database;
+  BOT_TOKEN_ENCRYPTION_KEY?: string;
+};
 
 async function ensureSchema(db: D1Database) {
   await db.batch([
@@ -31,7 +34,11 @@ async function ensureSchema(db: D1Database) {
         name TEXT NOT NULL,
         runtime TEXT NOT NULL DEFAULT 'python',
         status TEXT NOT NULL DEFAULT 'stopped',
+        connection_status TEXT NOT NULL DEFAULT 'disconnected',
         token_ciphertext TEXT,
+        discord_bot_id TEXT,
+        discord_username TEXT,
+        discord_avatar TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -39,11 +46,30 @@ async function ensureSchema(db: D1Database) {
     `),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_bots_user_id ON bots(user_id)")
   ]);
+
+  // Upgrade an existing BotVault D1 database without deleting current bot records.
+  for (const statement of [
+    "ALTER TABLE bots ADD COLUMN connection_status TEXT NOT NULL DEFAULT 'disconnected'",
+    "ALTER TABLE bots ADD COLUMN discord_bot_id TEXT",
+    "ALTER TABLE bots ADD COLUMN discord_username TEXT",
+    "ALTER TABLE bots ADD COLUMN discord_avatar TEXT"
+  ]) {
+    try {
+      await db.prepare(statement).run();
+    } catch {
+      // Column already exists on upgraded databases.
+    }
+  }
+}
+
+export async function getCloudflareEnv() {
+  const { env } = await getCloudflareContext({ async: true });
+  return env as unknown as BotVaultEnv;
 }
 
 export async function getDb() {
-  const { env } = await getCloudflareContext({ async: true });
-  const db = (env as unknown as BotVaultEnv).DB;
+  const env = await getCloudflareEnv();
+  const db = env.DB;
 
   if (!db) {
     throw new Error(
