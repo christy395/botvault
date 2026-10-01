@@ -23,6 +23,12 @@ function decodeKey(value: string): ArrayBuffer {
   return buffer;
 }
 
+function toArrayBuffer(bytes: Uint8Array<ArrayBufferLike>): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
 async function getKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
@@ -33,7 +39,7 @@ async function getKey(secret: string): Promise<CryptoKey> {
   );
 }
 
-function bytesToBase64(bytes: Uint8Array<ArrayBuffer>): string {
+function bytesToBase64(bytes: Uint8Array<ArrayBufferLike>): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -53,13 +59,16 @@ function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
 
 export async function encryptBotToken(token: string, secret: string): Promise<string> {
   const key = await getKey(secret);
+
   const iv = new Uint8Array(new ArrayBuffer(12));
   crypto.getRandomValues(iv);
+
+  const plaintext = toArrayBuffer(new TextEncoder().encode(token));
 
   const encrypted = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     key,
-    new TextEncoder().encode(token),
+    plaintext,
   );
 
   const encryptedBytes = new Uint8Array(encrypted);
@@ -89,7 +98,7 @@ export async function decryptBotToken(ciphertext: string, secret: string): Promi
   const plain = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv },
     key,
-    encrypted,
+    encrypted.buffer,
   );
 
   return new TextDecoder().decode(plain);
