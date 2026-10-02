@@ -1,3 +1,4 @@
+import { env as workerEnv } from "cloudflare:workers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
 
@@ -63,20 +64,19 @@ async function ensureSchema(db: D1Database) {
 }
 
 export async function getCloudflareEnv(): Promise<BotVaultEnv> {
-  const { env } = await getCloudflareContext({ async: true });
-  const runtimeEnv = env as unknown as BotVaultEnv;
+  const { env: contextEnv } = await getCloudflareContext({ async: true });
+  const context = contextEnv as unknown as BotVaultEnv;
+  const runtime = workerEnv as unknown as BotVaultEnv;
 
-  // OpenNext/Cloudflare normally exposes secrets on the env binding.
-  // With nodejs_compat, Cloudflare also exposes Worker secrets through process.env.
-  // Use both so the BotVault API works across OpenNext runtime versions.
   const processEnv = (globalThis as typeof globalThis & {
     process?: { env?: Record<string, string | undefined> };
   }).process?.env;
 
   return {
-    ...runtimeEnv,
+    DB: runtime.DB || context.DB,
     BOT_TOKEN_ENCRYPTION_KEY:
-      runtimeEnv.BOT_TOKEN_ENCRYPTION_KEY ||
+      runtime.BOT_TOKEN_ENCRYPTION_KEY ||
+      context.BOT_TOKEN_ENCRYPTION_KEY ||
       processEnv?.BOT_TOKEN_ENCRYPTION_KEY
   };
 }
