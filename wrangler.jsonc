@@ -15,6 +15,9 @@
       "database_id": "7d7e5d9e-c7ad-4bab-800a-33c766bd01e9"
     }
   ],
+  "secrets": {
+    "required": ["BOT_TOKEN_ENCRYPTION_KEY"]
+  },
   "observability": {
     "enabled": true
   }
