@@ -7,3 +7,7 @@ node_modules/
 .env.*
 !.env.example
 .DS_Store
+
+# BotVault VPS runner state/secrets
+data/
+*.tmp
