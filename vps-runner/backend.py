@@ -257,6 +257,9 @@ class BotInstance:
                             1.0,
                             float(data.get("heartbeat_interval", 45000)) / 1000.0,
                         )
+                        # HELLO starts a heartbeat window, so a socket that never
+                        # sends an ACK can still be detected as zombied.
+                        self.last_heartbeat_ack = time.monotonic()
                         if heartbeat_task:
                             heartbeat_task.cancel()
                         heartbeat_task = asyncio.create_task(self._heartbeat_loop())
