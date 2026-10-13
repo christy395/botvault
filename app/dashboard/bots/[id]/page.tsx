@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Bot = {
   id: string;
@@ -12,38 +12,94 @@ type Bot = {
   discord_username?: string | null;
   discord_bot_id?: string | null;
   created_at?: string;
+  updated_at?: string;
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
 };
 
 export default function BotProfile({ params }: { params: Promise<{ id: string }> }) {
   const [bot, setBot] = useState<Bot | null>(null);
+  const [botId, setBotId] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const { id } = await params;
-      const response = await fetch(`/api/bots/${encodeURIComponent(id)}`);
+  const loadBot = useCallback(async (id: string, quiet = false) => {
+    if (!quiet) setRefreshing(true);
+    try {
+      const response = await fetch(`/api/bots/${encodeURIComponent(id)}`, { cache: "no-store" });
       const data = await response.json();
-
       if (response.status === 401) {
         window.location.href = "/login";
         return;
       }
-
       if (!response.ok) {
         setError(data.error || "Could not load this bot.");
         return;
       }
-
+      setError("");
       setBot(data.bot);
-    })();
-  }, [params]);
+    } catch {
+      if (!quiet) setError("Could not reach BotVault. Check your connection and try again.");
+    } finally {
+      if (!quiet) setRefreshing(false);
+    }
+  }, []);
 
-  if (error) {
+  useEffect(() => {
+    let cancelled = false;
+    params.then(({ id }) => {
+      if (cancelled) return;
+      setBotId(id);
+      void loadBot(id);
+    });
+    return () => { cancelled = true; };
+  }, [params, loadBot]);
+
+  useEffect(() => {
+    if (!botId) return;
+    const timer = window.setInterval(() => void loadBot(botId, true), 10000);
+    return () => window.clearInterval(timer);
+  }, [botId, loadBot]);
+
+  async function runAction(action: "start" | "stop" | "restart") {
+    if (!botId || busy) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch(`/api/bots/${encodeURIComponent(botId)}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || `Could not ${action} this bot.`);
+        return;
+      }
+      setNotice(action === "start" ? "Start request accepted by the hosting runner."
+        : action === "stop" ? "Stop request accepted by the hosting runner."
+        : "Restart request accepted by the hosting runner.");
+      await loadBot(botId, true);
+    } catch {
+      setError("Could not reach the hosting runner. Check that a VPS is connected and configured.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const running = bot?.status === "running";
+  const connected = (bot?.connection_status || bot?.connectionStatus) === "connected";
+
+  if (error && !bot) {
     return (
       <main className="dashboardPage">
-        <nav className="nav">
-          <a className="brand" href="/dashboard">BOT<span>VAULT</span></a>
-        </nav>
+        <nav className="nav"><a className="brand" href="/dashboard">BOT<span>VAULT</span></a></nav>
         <section className="dashboardShell">
           <div className="dashboardNotice"><span>!</span>{error}</div>
           <a className="secondary" href="/dashboard">← Back to dashboard</a>
@@ -56,12 +112,10 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
     return (
       <main className="dashboardPage">
         <nav className="nav"><a className="brand" href="/dashboard">BOT<span>VAULT</span></a></nav>
-        <section className="dashboardShell"><div className="card botProfileLoading">Loading bot...</div></section>
+        <section className="dashboardShell"><div className="card botProfileLoading">Loading bot profile…</div></section>
       </main>
     );
   }
-
-  const connected = (bot.connection_status || bot.connectionStatus) === "connected";
 
   return (
     <main className="dashboardPage">
@@ -78,13 +132,42 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
 
         <div className="botProfileHero card">
           <div>
-            <span className="dashboardLabel">BOT PROFILE</span>
+            <span className="dashboardLabel">BOT PROFILE / CONTROL</span>
             <h1>{bot.name}</h1>
-            <p>This page contains only this bot. Other bots in your account are not shown here.</p>
+            <p>Manage this bot's connection and hosting state from one place.</p>
+            <div className="profileMeta">ID: <code>{bot.id}</code></div>
           </div>
-          <span className={connected ? "statusBadge liveStatus" : "statusBadge pending"}>
-            <i /> {connected ? "Discord connected" : "Not connected"}
+          <span className={running ? "statusBadge liveStatus" : "statusBadge pending"}>
+            <i /> {running ? "Running" : bot.status === "starting" ? "Starting" : "Stopped"}
           </span>
+        </div>
+
+        {notice && <div className="dashboardNotice dashboardSuccess" role="status"><span>✓</span>{notice}</div>}
+        {error && <div className="dashboardNotice" role="alert"><span>!</span>{error}</div>}
+
+        <section className="card profileControls">
+          <div>
+            <span className="dashboardLabel">PROCESS CONTROL</span>
+            <h2>Bot controls</h2>
+            <p>Actions are sent securely to your configured BotVault hosting runner.</p>
+          </div>
+          <div className="profileControlButtons">
+            <button className="primary" onClick={() => runAction("start")} disabled={busy || running}>
+              {busy ? "Working…" : "▶ Start"}
+            </button>
+            <button className="secondary" onClick={() => runAction("restart")} disabled={busy || !running}>↻ Restart</button>
+            <button className="secondary" onClick={() => runAction("stop")} disabled={busy || !running}>■ Stop</button>
+            <button className="secondary" onClick={() => void loadBot(botId)} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+        </section>
+
+        <div className="profileMetricsGrid">
+          <article className="card profileMetric"><span>PROCESS STATUS</span><strong>{bot.status || "Unknown"}</strong><small>From BotVault account record</small></article>
+          <article className="card profileMetric"><span>DISCORD CONNECTION</span><strong>{connected ? "Validated" : "Unknown"}</strong><small>Credential validation is not the same as a live gateway session</small></article>
+          <article className="card profileMetric"><span>CPU USAGE</span><strong>—</strong><small>Live metrics require a connected node metrics endpoint</small></article>
+          <article className="card profileMetric"><span>MEMORY USAGE</span><strong>—</strong><small>Live metrics require a connected node metrics endpoint</small></article>
         </div>
 
         <div className="botProfileGrid">
@@ -93,25 +176,27 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
             <h2>{bot.discord_username || "Discord bot"}</h2>
             <div className="infoRows">
               <div><span>Discord bot ID</span><b>{bot.discord_bot_id || "—"}</b></div>
-              <div><span>Connection</span><b>{connected ? "Connected" : "Not connected"}</b></div>
+              <div><span>Credential status</span><b>{connected ? "Validated" : "Not validated"}</b></div>
               <div><span>Token</span><b>Encrypted & hidden</b></div>
+              <div><span>Last record update</span><b>{formatDate(bot.updated_at)}</b></div>
             </div>
           </section>
 
           <section className="card botInfoCard">
-            <span className="dashboardLabel">HOSTING</span>
+            <span className="dashboardLabel">RUNTIME</span>
             <h2>{bot.runtime === "node" ? "Node.js" : "Python"}</h2>
             <div className="infoRows">
-              <div><span>Process</span><b>{bot.status}</b></div>
-              <div><span>Hosting node</span><b>Not connected</b></div>
-              <div><span>24/7 runtime</span><b>Waiting for VPS</b></div>
+              <div><span>Runtime selection</span><b>{bot.runtime}</b></div>
+              <div><span>Hosting node</span><b>Depends on VPS configuration</b></div>
+              <div><span>Project file deployment</span><b>Not enabled yet</b></div>
+              <div><span>Last created</span><b>{formatDate(bot.created_at)}</b></div>
             </div>
           </section>
         </div>
 
         <section className="card botSecurityNote">
-          <strong>🔒 Token protection</strong>
-          <p>Your Discord token is never displayed on this page or returned by the normal bot API. BotVault stores it encrypted for the future hosting controller.</p>
+          <strong>🔒 Security and current capability</strong>
+          <p>Your token is not displayed here. BotVault sends process actions from the server to the runner; keep VPS_API_KEY and BOT_TOKEN_ENCRYPTION_KEY in server-side secrets only. The current runner connects a Discord bot and supports configured simple commands, but it does not yet upload and execute arbitrary user project files. CPU/RAM metrics and console streaming are not shown as live until their authenticated node endpoints are connected.</p>
         </section>
       </section>
     </main>
