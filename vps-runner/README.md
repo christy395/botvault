@@ -86,3 +86,12 @@ Put the runner behind HTTPS and a firewall. Never commit `VPS_API_KEY` or `BOT_D
 **Important:** this simple runner persists Discord tokens in the local JSON state file so bots can reconnect after a runner restart. The file is Git-ignored, but it is plaintext and must be protected with normal server filesystem permissions. For a higher-security production deployment, replace the JSON token store with encrypted secret storage.
 
 The existing BotVault Next.js dashboard remains the control plane; this runner is the compute-side service.
+
+
+## Console events
+
+The runner keeps a bounded in-memory history of the latest 500 lifecycle events per bot. Authenticated `GET /api/bots/<bot_id>/logs?limit=100` returns up to 200 recent entries. The BotVault web API checks bot ownership before proxying this endpoint to the dashboard.
+
+Current events cover start requests, Discord Gateway readiness/resume, reconnect warnings, connection failures, and process stops. They deliberately exclude Discord message content and credentials. Logs are in memory and reset when the runner restarts; they are not arbitrary project stdout/stderr because uploaded project execution is not implemented yet.
+
+The bot dashboard refreshes status and recent logs periodically. A live per-container console requires the future isolated project-worker runtime.
