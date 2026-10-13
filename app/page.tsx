@@ -3,12 +3,12 @@
 import { useState } from "react";
 
 const features = [
-  ["24/7 Hosting", "Run supported Discord bots continuously on isolated hosting nodes."],
-  ["Node.js + Python", "Deploy bots using the runtimes your project actually needs."],
-  ["Live Console", "Follow deployment and runtime logs from the BotVault dashboard."],
-  ["File Manager", "Manage bot files without exposing the host filesystem."],
-  ["Environment Secrets", "Keep Discord tokens and application secrets out of the UI and logs."],
-  ["Resource Monitoring", "Track CPU, memory, storage and uptime from the control panel."]
+  ["Private Bot Profiles", "Keep each bot's settings and account records scoped to your account."],
+  ["Discord Token Validation", "Validate a bot token with Discord before saving its encrypted credential."],
+  ["Python + Node Selection", "Choose a runtime profile for your bot while hosting-node support is configured."],
+  ["Command Builder", "Configure simple prefix commands for bots connected to the BotVault runner."],
+  ["Server-Side Secrets", "Keep bot tokens and runner credentials out of the browser and public responses."],
+  ["Process Controls", "Start, stop, restart, and refresh a bot from its individual control panel."]
 ];
 
 export default function Home() {
@@ -39,7 +39,7 @@ export default function Home() {
           <a className="secondary" href="#features">Explore Features</a>
         </div>
         <div className="heroPanel">
-          <div className="panelTop"><span>BOTVAULT / OVERVIEW</span><span className="live"><i /> LIVE</span></div>
+          <div className="panelTop"><span>BOTVAULT / OVERVIEW</span><span className="live"><i /> CONTROL PANEL</span></div>
           <div className="panelGrid">
             <div><small>ACTIVE BOTS</small><strong>—</strong><span>Connected infrastructure required</span></div>
             <div><small>HOSTING</small><strong>FREE</strong><span>Forever plan</span></div>
@@ -60,7 +60,7 @@ export default function Home() {
         <article className="priceCard">
           <div><span className="pill">FREE FOREVER</span><h3>Starter</h3><p>Everything required to begin hosting on the available BotVault node capacity.</p></div>
           <div className="price">₹0 <small>/ forever</small></div>
-          <ul><li>Configurable bot limit</li><li>Configurable RAM and storage</li><li>Node.js and Python</li><li>Dashboard and console</li><li>File and environment management</li></ul>
+          <ul><li>Free account and bot profiles</li><li>Limits depend on connected node capacity</li><li>Python and Node runtime selection</li><li>Bot controls and command builder</li><li>Encrypted token storage</li></ul>
           <a className="primary" href="/dashboard">Create Your Bot <b>→</b></a>
         </article>
       </section>
@@ -77,8 +77,8 @@ export default function Home() {
       <section id="faq" className="section faq">
         <div className="sectionHead"><span>04 / FAQ</span><h2>Questions, answered.</h2></div>
         <details><summary>Is BotVault really free?</summary><p>The application is designed around a ₹0/$0 Free Forever plan. Actual capacity depends on the hosting nodes connected to the platform.</p></details>
-        <details><summary>Where do my Discord bots run?</summary><p>The website manages your bots, while dedicated hosting nodes run their code. Each bot should run in an isolated container with appropriate resource limits.</p></details>
-        <details><summary>Are Discord tokens protected?</summary><p>The production architecture requires tokens to remain server-side and protected. They must never be placed in public URLs, browser logs, analytics, or normal API responses.</p></details>
+        <details><summary>Where do my Discord bots run?</summary><p>The website is the control panel. A separately configured Linux hosting runner must be online to keep a bot connected. The current runner supports Discord gateway connections and configured simple commands; arbitrary project-file uploads and isolated per-user containers are not enabled yet.</p></details>
+        <details><summary>Are Discord tokens protected?</summary><p>BotVault encrypts stored tokens in the web database and does not return them in normal bot API responses. The runner currently keeps reconnect state in a private local JSON file, so the VPS filesystem must be restricted; encrypted runner-side persistence is still a production-hardening task.</p></details>
       </section>
 
       <footer><div className="brand">BOT<span>VAULT</span></div><p>Free Discord Bot Hosting. Forever.</p><span>© 2026 BotVault</span></footer>
