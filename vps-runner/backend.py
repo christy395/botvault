@@ -883,6 +883,12 @@ def broadcast_event(bot_id: str, event: dict[str, Any]) -> None:
 
 def persist_state() -> None:
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # Bot state contains Discord tokens. Restrict the directory and file to the
+    # runner account; this is permission hardening, not encryption.
+    try:
+        os.chmod(DATA_FILE.parent, 0o700)
+    except OSError:
+        log.warning("could not restrict bot data directory permissions")
 
     with persistence_lock, pool_lock:
         data = [
@@ -899,7 +905,14 @@ def persist_state() -> None:
         ]
 
         tmp = DATA_FILE.with_suffix(DATA_FILE.suffix + ".tmp")
-        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        # Create the temporary state file with owner-only permissions from the
+        # start, so plaintext credentials are not briefly world-readable.
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(data, indent=2))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(tmp, 0o600)
         os.replace(tmp, DATA_FILE)
 
 
