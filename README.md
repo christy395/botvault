@@ -6,7 +6,7 @@
 
 
 
-BotVault is a Cloudflare-first Discord bot hosting platform designed around a genuine Free Forever plan. The project separates the web application from the machines that actually run customer Discord bots.
+BotVault is a Discord bot hosting platform designed around a genuine Free Forever plan. The project separates the web application from the machines that actually run customer Discord bots.
 
 
 
@@ -18,7 +18,7 @@ BotVault is a Cloudflare-first Discord bot hosting platform designed around a ge
 
 - Architecture
 
-- Cloudflare
+- Deployment platform
 
 - Technology
 
@@ -78,7 +78,7 @@ BotVault provides a browser control panel for creating, deploying, monitoring, a
 
 
 
-BotVault is intentionally not designed to execute long-lived Discord processes inside Cloudflare Workers. Cloudflare is the web and API edge. Dedicated Linux hosting nodes run the customer processes.
+BotVault separates the web control panel from long-running Discord bot processes. The web application manages accounts and deployments, while dedicated Linux hosting nodes run customer processes.
 
 
 
@@ -90,7 +90,7 @@ BotVault is intentionally not designed to execute long-lived Discord processes i
 
 3. Isolate customer workloads from each other and from the host.
 
-4. Keep the web layer Cloudflare-compatible.
+4. Keep the web layer deployable on the chosen web platform.
 
 5. Support a genuine $0/₹0 Free Forever plan.
 
@@ -102,7 +102,7 @@ BotVault is intentionally not designed to execute long-lived Discord processes i
 
 ## Architecture
 
-User browser → Cloudflare Pages/Workers → BotVault API → D1/R2/KV → authenticated hosting controller → Linux node → Docker container → Discord.
+User browser → BotVault web application → API → application database and file storage → authenticated hosting controller → Linux node → Docker container → Discord.
 
 
 
@@ -110,15 +110,15 @@ The web/API layer handles authentication, application data, files, configuration
 
 
 
-## Why Cloudflare
+## Control plane and compute
 
-Cloudflare provides the public edge layer, DNS, web delivery, Workers, D1, R2, KV, security features, and a deployment environment suitable for the BotVault control plane. This also keeps the public web application separate from the servers running untrusted customer code.
+The web application provides the public control panel and API. A separate hosting controller and isolated Linux nodes execute customer bot code. Keeping these layers separate helps protect the control panel from untrusted workloads.
 
 
 
 ## Why bots need a hosting node
 
-Discord bots normally maintain persistent Gateway connections and need a process that remains alive. Workers are request-oriented/serverless infrastructure and should not be treated as the permanent process manager for customer bots. BotVault therefore uses a dedicated Linux server or fleet of servers for the actual bot processes.
+Discord bots normally maintain persistent Gateway connections and need a process that remains alive. Request-oriented web runtimes should not be treated as the permanent process manager for customer bots. BotVault therefore uses a dedicated Linux server or fleet of servers for the actual bot processes.
 
 
 
@@ -128,17 +128,15 @@ Discord bots normally maintain persistent Gateway connections and need a process
 
 - TypeScript for application code
 
-- Cloudflare Pages/Workers for the web/API edge
+- A supported web runtime for the web/API layer
 
-- Cloudflare D1 for relational application data
+- A relational database for application records
 
-- Cloudflare R2 for object and bot-file storage
+- Object storage for bot files and deployment packages
 
-- Cloudflare KV for appropriate cache/session use cases
+- A cache or key-value store for suitable short-lived data
 
-- Wrangler for Cloudflare management
-
-- OpenNext for Cloudflare-compatible Next.js deployment
+- The deployment CLI and adapter for the chosen platform
 
 - Linux and Docker for bot execution
 
@@ -156,7 +154,7 @@ Important project files include:
 
 - app/globals.css — visual system and responsive styling
 
-- wrangler.jsonc — Cloudflare bindings and deployment configuration
+- wrangler.jsonc — current deployment bindings and configuration
 
 - schema.sql — D1 starter schema
 
@@ -232,21 +230,21 @@ Ownership relationships should make it impossible for one user to access another
 
 
 
-## Cloudflare D1
+## Relational database
 
-D1 is intended for structured application records such as users, bots, deployments, servers, plan limits, and audit events. The repository includes schema.sql as a starting point. Production database changes should use deliberate migrations and backups.
-
-
-
-## Cloudflare R2
-
-R2 can store bot project files, deployment packages, large log exports, and backups where appropriate. R2 does not replace the isolated filesystem of a running container.
+The application database stores structured records such as users, bots, deployments, servers, plan limits, and audit events. The repository includes schema.sql as a starting point. Production database changes should use deliberate migrations and backups.
 
 
 
-## Cloudflare KV
+## Object storage
 
-KV can support cache, short-lived state, session-related information, and other suitable edge use cases. It should not replace D1 as the primary relational store.
+Object storage can hold bot project files, deployment packages, large log exports, and backups where appropriate. It does not replace the isolated filesystem of a running container.
+
+
+
+## Cache and short-lived state
+
+A key-value store can support caching, short-lived state, and session-related information. It should not replace the primary relational database.
 
 
 
@@ -310,7 +308,7 @@ Required controls include password hashing, secure sessions, authorization, owne
 
 
 
-Do not expose database passwords, Discord tokens, Cloudflare credentials, controller secrets, API keys, or private credentials.
+Do not expose database passwords, Discord tokens, hosting-platform credentials, controller secrets, API keys, or private credentials.
 
 
 
@@ -324,9 +322,7 @@ Possible controls include CPU quota, memory limit, PID limit, storage quota, pro
 
 ## Deployment
 
-The project is configured for Cloudflare-oriented deployment using Wrangler and OpenNext.
-
-Before production deployment, create D1, R2, and KV resources, replace placeholder IDs in wrangler.jsonc, apply the database schema, configure production secrets, verify Cloudflare permissions, and connect an authenticated hosting controller.
+The project includes deployment configuration and a starter database schema. Before production deployment, provision the database and file-storage resources required by your chosen platform, configure production secrets, apply the schema, and connect an authenticated hosting controller.
 
 Deployment of the website alone does not create a bot hosting node.
 
@@ -338,23 +334,21 @@ Install Node.js and npm, then run npm install followed by npm run dev. Use the p
 
 
 
-## Cloudflare setup
+## Deployment setup
 
-1. Authenticate Wrangler with your Cloudflare account.
+1. Choose a supported web application platform.
 
-2. Create a D1 database.
+2. Provision the database, object storage, and cache resources required by the application.
 
-3. Create the botvault-files R2 bucket.
+3. Configure the environment variables and secrets for that platform.
 
-4. Create a KV namespace.
+4. Apply schema.sql to the production database.
 
-5. Replace the placeholder D1 and KV IDs in wrangler.jsonc.
+5. Configure the deployment adapter and build settings.
 
-6. Apply schema.sql to D1.
+6. Connect and secure the hosting controller.
 
-7. Configure production secrets using Cloudflare's secure secret mechanism.
-
-8. Build and deploy using the configured OpenNext workflow.
+7. Build, test, and deploy the web application.
 
 
 
@@ -396,7 +390,7 @@ If a bot crashes, the controller detects the process exit, evaluates the restart
 
 Build errors: run npm install and npm run build and inspect the first meaningful error.
 
-Cloudflare errors: verify Wrangler authentication, D1 ID, KV ID, R2 bucket, configuration, and permissions.
+Deployment errors: verify the platform configuration, database and storage bindings, build settings, and permissions.
 
 Database errors: verify the D1 binding and that the schema has been applied.
 
@@ -450,7 +444,7 @@ Empty console: verify container logs, controller connectivity, authentication, a
 
 ## Production readiness
 
-The repository provides the Cloudflare-oriented web foundation, original BotVault UI, deployment configuration, database starting point, and architecture documentation.
+The repository provides the BotVault web foundation, original UI, deployment configuration, database starting point, and architecture documentation.
 
 A complete production hosting service still requires the real authentication implementation, storage integration, hosting controller, Docker worker, node registration, bot deployment lifecycle, realtime logs, resource monitoring, secret management, admin RBAC, rate limiting, auditing, backups, monitoring, and recovery procedures.
 
@@ -462,7 +456,7 @@ BotVault must not present these integrations as active until they are actually c
 
 ## Current scope
 
-Included in this repository are the Next.js foundation, TypeScript configuration, Cloudflare Wrangler configuration, D1 starter schema, R2/KV bindings, OpenNext deployment foundation, responsive BotVault landing page, Free Forever messaging, security requirements, and production architecture documentation.
+Included in this repository are the Next.js foundation, TypeScript configuration, deployment configuration, starter database schema, storage bindings, responsive BotVault landing page, Free Forever messaging, security requirements, and production architecture documentation.
 
 
 
@@ -478,7 +472,7 @@ Paid plans should only be introduced with real billing logic and a real payment 
 
 ## Contributing
 
-Contributions should preserve security, Cloudflare compatibility, container isolation, server-side authorization, accurate infrastructure reporting, responsive design, and maintainable code.
+Contributions should preserve security, deployment portability, container isolation, server-side authorization, accurate infrastructure reporting, responsive design, and maintainable code.
 
 Before submitting changes, install dependencies, run the development server, run a production build, test ownership and authentication changes, inspect responsive layouts, check for secrets, and document significant architecture changes.
 
@@ -492,7 +486,7 @@ Choose a license that matches the intended open-source or commercial use of BotV
 
 ## Security notice
 
-Never publish a Discord bot token, database password, Cloudflare API token, hosting-controller secret, OAuth secret, or other private credential in GitHub, README files, screenshots, issues, or chat.
+Never publish a Discord bot token, database password, hosting-platform API token, hosting-controller secret, OAuth secret, or other private credential in GitHub, README files, screenshots, issues, or chat.
 
 If a credential is exposed, revoke or rotate it immediately.
 
@@ -500,7 +494,7 @@ If a credential is exposed, revoke or rotate it immediately.
 
 ## Final architecture
 
-BOTVAULT WEB/API → Cloudflare Pages/Workers → D1/R2/KV → authenticated hosting controller → Linux nodes → Docker containers → Discord.
+BOTVAULT WEB/API → application database and file storage → authenticated hosting controller → Linux nodes → Docker containers → Discord.
 
 
 
