@@ -456,7 +456,22 @@ BotVault must not present these integrations as active until they are actually c
 
 ## Current scope
 
-Included in this repository are the Next.js foundation, TypeScript configuration, deployment configuration, starter database schema, storage bindings, responsive BotVault landing page, Free Forever messaging, security requirements, and production architecture documentation.
+Implemented in this repository:
+- Responsive neon-dark landing page and account dashboard.
+- Bot profile creation with Discord token validation and encrypted database storage.
+- Owner-scoped bot profile and start/stop/restart API routes.
+- Authenticated VPS runner action requests, including bearer-key compatibility.
+- Runner status proxy for live process state, uptime, Discord gateway latency, guild count, and command count.
+- Runner-side owner-only file permissions for its local JSON state file.
+- Bot profile UI that refreshes runner status and reports unavailable metrics honestly.
+
+Not yet implemented:
+- Arbitrary Python/Node project uploads, dependency installation, or user startup commands.
+- Per-user Docker containers and enforced CPU/RAM/PID/storage quotas.
+- Live CPU/RAM collection, full console log streaming in the web dashboard, node registration, and scheduling.
+- Encrypted persistence of runner-side token copies. The runner state file contains plaintext tokens, so its host filesystem must be tightly restricted. File permissions reduce exposure but are not encryption.
+
+A bot token alone does not include custom project source code. Do not advertise arbitrary project hosting or guaranteed 24/7 execution until the missing compute-plane features are deployed and tested.
 
 
 
