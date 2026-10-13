@@ -2,6 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+type RuntimeStatus = {
+  botId: string;
+  running: boolean;
+  ready: boolean;
+  uptime: number;
+  latencyMs: number | null;
+  guilds: number;
+  members: number;
+  commandsUsed: number;
+  lastError: string | null;
+};
+
 type Bot = {
   id: string;
   name: string;
@@ -23,6 +35,8 @@ const formatDate = (value?: string) => {
 
 export default function BotProfile({ params }: { params: Promise<{ id: string }> }) {
   const [bot, setBot] = useState<Bot | null>(null);
+  const [runtimeInfo, setRuntimeInfo] = useState<RuntimeStatus | null>(null);
+  const [runtimeError, setRuntimeError] = useState("");
   const [botId, setBotId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -44,6 +58,20 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
       }
       setError("");
       setBot(data.bot);
+      try {
+        const runtimeResponse = await fetch(`/api/bots/${encodeURIComponent(id)}/runtime`, { cache: "no-store" });
+        const runtimeData = await runtimeResponse.json();
+        if (runtimeResponse.ok && runtimeData.runtime) {
+          setRuntimeInfo(runtimeData.runtime);
+          setRuntimeError("");
+        } else {
+          setRuntimeInfo(null);
+          setRuntimeError(runtimeData.error || "Hosting runner is unavailable.");
+        }
+      } catch {
+        setRuntimeInfo(null);
+        setRuntimeError("Hosting runner is unavailable.");
+      }
     } catch {
       if (!quiet) setError("Could not reach BotVault. Check your connection and try again.");
     } finally {
@@ -93,8 +121,14 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
     }
   }
 
-  const running = bot?.status === "running";
-  const connected = (bot?.connection_status || bot?.connectionStatus) === "connected";
+  const running = runtimeInfo ? runtimeInfo.running : bot?.status === "running";
+  const connected = runtimeInfo ? runtimeInfo.ready : (bot?.connection_status || bot?.connectionStatus) === "connected";
+  const formatUptime = (seconds: number) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return days ? `${days}d ${hours}h` : hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
 
   if (error && !bot) {
     return (
@@ -164,10 +198,10 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
         </section>
 
         <div className="profileMetricsGrid">
-          <article className="card profileMetric"><span>PROCESS STATUS</span><strong>{bot.status || "Unknown"}</strong><small>From BotVault account record</small></article>
-          <article className="card profileMetric"><span>DISCORD CONNECTION</span><strong>{connected ? "Validated" : "Unknown"}</strong><small>Credential validation is not the same as a live gateway session</small></article>
-          <article className="card profileMetric"><span>CPU USAGE</span><strong>—</strong><small>Live metrics require a connected node metrics endpoint</small></article>
-          <article className="card profileMetric"><span>MEMORY USAGE</span><strong>—</strong><small>Live metrics require a connected node metrics endpoint</small></article>
+          <article className="card profileMetric"><span>LIVE PROCESS</span><strong>{runtimeInfo ? (running ? "Running" : "Stopped") : "Unavailable"}</strong><small>{runtimeError || "Live runner status, refreshed every 10 seconds"}</small></article>
+          <article className="card profileMetric"><span>BOT UPTIME</span><strong>{runtimeInfo ? formatUptime(runtimeInfo.uptime) : "—"}</strong><small>Measured by the hosting runner</small></article>
+          <article className="card profileMetric"><span>GATEWAY LATENCY</span><strong>{runtimeInfo?.latencyMs != null ? `${runtimeInfo.latencyMs} ms` : "—"}</strong><small>Discord heartbeat acknowledgement</small></article>
+          <article className="card profileMetric"><span>CPU / MEMORY</span><strong>—</strong><small>Per-container metrics require container isolation and a node metrics agent</small></article>
         </div>
 
         <div className="botProfileGrid">
@@ -187,12 +221,15 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
             <h2>{bot.runtime === "node" ? "Node.js" : "Python"}</h2>
             <div className="infoRows">
               <div><span>Runtime selection</span><b>{bot.runtime}</b></div>
-              <div><span>Hosting node</span><b>Depends on VPS configuration</b></div>
+              <div><span>Runner status</span><b>{runtimeInfo ? "Reachable" : "Unavailable"}</b></div>
+              <div><span>Hosting uptime</span><b>{runtimeInfo ? formatUptime(runtimeInfo.uptime) : "—"}</b></div>
               <div><span>Project file deployment</span><b>Not enabled yet</b></div>
               <div><span>Last created</span><b>{formatDate(bot.created_at)}</b></div>
             </div>
           </section>
         </div>
+
+        {runtimeInfo?.lastError && <div className="dashboardNotice" role="status"><span>!</span>Runner report: {runtimeInfo.lastError}</div>}
 
         <section className="card botSecurityNote">
           <strong>🔒 Security and current capability</strong>
