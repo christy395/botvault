@@ -14,6 +14,8 @@ type RuntimeStatus = {
   lastError: string | null;
 };
 
+type ConsoleLog = { time: string; level: "INFO" | "WARN" | "ERROR"; message: string };
+
 type Bot = {
   id: string;
   name: string;
@@ -37,6 +39,8 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
   const [bot, setBot] = useState<Bot | null>(null);
   const [runtimeInfo, setRuntimeInfo] = useState<RuntimeStatus | null>(null);
   const [runtimeError, setRuntimeError] = useState("");
+  const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
+  const [logsError, setLogsError] = useState("");
   const [botId, setBotId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -71,6 +75,18 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
       } catch {
         setRuntimeInfo(null);
         setRuntimeError("Hosting runner is unavailable.");
+      }
+      try {
+        const logsResponse = await fetch(`/api/bots/${encodeURIComponent(id)}/logs`, { cache: "no-store" });
+        const logsData = await logsResponse.json();
+        if (logsResponse.ok && Array.isArray(logsData.logs)) {
+          setConsoleLogs(logsData.logs);
+          setLogsError("");
+        } else {
+          setLogsError(logsData.error || "Console logs are unavailable.");
+        }
+      } catch {
+        setLogsError("Console logs are unavailable.");
       }
     } catch {
       if (!quiet) setError("Could not reach BotVault. Check your connection and try again.");
@@ -228,6 +244,25 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
             </div>
           </section>
         </div>
+
+        <section className="card botConsoleCard">
+          <div className="botConsoleHeader">
+            <div><span className="dashboardLabel">HOSTING RUNNER</span><h2>Console</h2></div>
+            <span className="consoleCount">{consoleLogs.length} recent events</span>
+          </div>
+          {logsError && <p className="consoleEmpty">{logsError}</p>}
+          {!logsError && consoleLogs.length === 0 && <p className="consoleEmpty">No runner events yet. Start the bot to see connection and lifecycle messages here.</p>}
+          {consoleLogs.length > 0 && <div className="botConsole" role="log" aria-live="polite">
+            {consoleLogs.map((entry, index) => (
+              <div className="consoleLine" key={`${entry.time}-${index}`}>
+                <time>{new Date(entry.time).toLocaleTimeString()}</time>
+                <b className={`consoleLevel consoleLevel${entry.level}`}>{entry.level}</b>
+                <span>{entry.message}</span>
+              </div>
+            ))}
+          </div>}
+          <p className="consoleFootnote">Lifecycle and error metadata only. This is not yet a stream of arbitrary project stdout/stderr.</p>
+        </section>
 
         {runtimeInfo?.lastError && <div className="dashboardNotice" role="status"><span>!</span>Runner report: {runtimeInfo.lastError}</div>}
 
