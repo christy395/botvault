@@ -50,3 +50,24 @@ input,textarea,select{accent-color:#a855f7}
 :focus-visible{outline:2px solid #67e8f9;outline-offset:3px}
 @media(max-width:800px){.hero{padding-top:95px}.section{padding-top:72px;padding-bottom:72px}.featureGrid{grid-template-columns:1fr}.panelGrid>div{padding:18px 14px}.panelGrid strong{font-size:22px}.panelGrid span{font-size:11px}.priceCard{padding:25px}.nav{padding:0 5%}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* Bot profile controls: responsive neon-dark management panel. */
+.profileMeta{margin-top:12px;color:#9da0b8;font-size:12px;overflow-wrap:anywhere}
+.profileMeta code{color:#c9b8ff}
+.profileControls{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px;margin:22px 0}
+.profileControls h2{margin:8px 0;font-size:22px}
+.profileControls p{margin:0;color:#9da0b8;font-size:13px;line-height:1.6}
+.profileControlButtons{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.profileControlButtons button{min-height:42px}
+.profileControlButtons button:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.5)}
+.profileMetricsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:20px 0}
+.profileMetric{padding:20px;min-width:0}
+.profileMetric>span{display:block;color:#9da0b8;font-size:10px;font-weight:800;letter-spacing:.12em}
+.profileMetric strong{display:block;margin:13px 0 8px;font-size:23px;overflow-wrap:anywhere}
+.profileMetric small{display:block;color:#898ca5;font-size:11px;line-height:1.55}
+.botProfileShell .botProfileGrid{margin-top:18px}
+.botProfileShell .botSecurityNote{margin-top:18px}
+.botProfileShell .botSecurityNote p{line-height:1.75}
+@media(max-width:900px){.profileMetricsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.profileControls{align-items:flex-start;flex-direction:column}.profileControlButtons{justify-content:flex-start}}
+@media(max-width:520px){.profileMetricsGrid{grid-template-columns:1fr 1fr;gap:9px}.profileMetric{padding:14px}.profileMetric strong{font-size:18px}.profileControls{padding:17px}.profileControlButtons{width:100%}.profileControlButtons button{flex:1 1 42%}.profileMeta code{word-break:break-all}}
