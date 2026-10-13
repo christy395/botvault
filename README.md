@@ -462,6 +462,8 @@ Implemented in this repository:
 - Owner-scoped bot profile and start/stop/restart API routes.
 - Authenticated VPS runner action requests, including bearer-key compatibility.
 - Runner status proxy for live process state, uptime, Discord gateway latency, guild count, and command count.
+- Owner-scoped bot console with bounded lifecycle and error logs.
+- Authenticated Linux host CPU, memory, and disk metrics, clearly labeled as host-wide rather than per-container usage.
 - Runner-side owner-only file permissions for its local JSON state file.
 - Bot profile UI that refreshes runner status and reports unavailable metrics honestly.
 
