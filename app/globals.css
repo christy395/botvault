@@ -71,3 +71,20 @@ input,textarea,select{accent-color:#a855f7}
 .botProfileShell .botSecurityNote p{line-height:1.75}
 @media(max-width:900px){.profileMetricsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.profileControls{align-items:flex-start;flex-direction:column}.profileControlButtons{justify-content:flex-start}}
 @media(max-width:520px){.profileMetricsGrid{grid-template-columns:1fr 1fr;gap:9px}.profileMetric{padding:14px}.profileMetric strong{font-size:18px}.profileControls{padding:17px}.profileControlButtons{width:100%}.profileControlButtons button{flex:1 1 42%}.profileMeta code{word-break:break-all}}
+
+
+/* Bounded runner console */
+.botConsoleCard{margin-top:18px;padding:22px;min-width:0}
+.botConsoleHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.botConsoleHeader h2{margin:7px 0 0;font-size:21px}
+.consoleCount{color:#9295ad;font-size:11px}
+.botConsole{max-height:360px;overflow:auto;background:rgba(4,6,18,.86);border:1px solid rgba(145,124,255,.18);border-radius:12px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.consoleLine{display:grid;grid-template-columns:90px 54px minmax(0,1fr);gap:10px;padding:7px 3px;border-bottom:1px solid rgba(145,124,255,.09);font-size:11px;line-height:1.6}
+.consoleLine:last-child{border-bottom:0}
+.consoleLine time{color:#777b95;white-space:nowrap}
+.consoleLine>span{color:#d7d8e9;overflow-wrap:anywhere;white-space:pre-wrap}
+.consoleLevel{font-size:9px;letter-spacing:.08em}
+.consoleLevelINFO{color:#75e5d0}.consoleLevelWARN{color:#ffd47a}.consoleLevelERROR{color:#ff829c}
+.consoleEmpty,.consoleFootnote{color:#9295ad;font-size:12px;line-height:1.7}
+.consoleFootnote{margin:12px 0 0;font-size:10px}
+@media(max-width:520px){.botConsoleCard{padding:15px}.consoleLine{grid-template-columns:65px 45px minmax(0,1fr);gap:6px;font-size:10px}.botConsoleHeader{align-items:flex-start}}
