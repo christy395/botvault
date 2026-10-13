@@ -90,3 +90,38 @@ export async function getVpsBotStatus(botId: string): Promise<VpsBotStatus> {
   }
   return (data as { bot: VpsBotStatus }).bot;
 }
+
+export type VpsConsoleLog = {
+  time: string;
+  level: "INFO" | "WARN" | "ERROR";
+  message: string;
+};
+
+export async function getVpsBotLogs(botId: string, limit = 100): Promise<VpsConsoleLog[]> {
+  const { url, key } = getVpsConfig();
+  const safeLimit = Math.max(1, Math.min(200, Math.floor(limit)));
+  const response = await fetch(
+    `${url}/api/bots/${encodeURIComponent(botId)}/logs?limit=${safeLimit}`,
+    {
+      method: "GET",
+      headers: {
+        "X-API-Key": key,
+        Authorization: `Bearer ${key}`,
+        "User-Agent": "BotVault-Worker/1.0"
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000)
+    }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = typeof data === "object" && data && "error" in data
+      ? String((data as { error?: unknown }).error)
+      : "The hosting runner could not return console logs.";
+    throw new Error(message);
+  }
+  if (!data || typeof data !== "object" || !("logs" in data) || !Array.isArray((data as { logs?: unknown }).logs)) {
+    throw new Error("The hosting runner returned an invalid logs response.");
+  }
+  return (data as { logs: VpsConsoleLog[] }).logs;
+}
