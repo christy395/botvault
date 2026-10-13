@@ -125,3 +125,36 @@ export async function getVpsBotLogs(botId: string, limit = 100): Promise<VpsCons
   }
   return (data as { logs: VpsConsoleLog[] }).logs;
 }
+
+export type VpsNodeStats = {
+  scope: "host";
+  cpuPercent: number | null;
+  memoryUsedBytes: number | null;
+  memoryTotalBytes: number | null;
+  memoryPercent: number | null;
+  diskUsedBytes: number | null;
+  diskTotalBytes: number | null;
+  diskPercent: number | null;
+};
+
+export async function getVpsNodeStats(): Promise<VpsNodeStats> {
+  const { url, key } = getVpsConfig();
+  const response = await fetch(`${url}/api/node/stats`, {
+    method: "GET",
+    headers: {
+      "X-API-Key": key,
+      Authorization: `Bearer ${key}`,
+      "User-Agent": "BotVault-Worker/1.0"
+    },
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data || typeof data !== "object" || !("stats" in data)) {
+    const message = typeof data === "object" && data && "error" in data
+      ? String((data as { error?: unknown }).error)
+      : "The hosting node metrics are unavailable.";
+    throw new Error(message);
+  }
+  return (data as { stats: VpsNodeStats }).stats;
+}
