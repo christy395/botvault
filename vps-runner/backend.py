@@ -565,7 +565,12 @@ def require_api_key() -> Optional[Response]:
     if not API_KEY:
         return jsonify({"error": "VPS_API_KEY is not configured."}), 503
 
+    # Accept both the runner's documented X-API-Key and the control plane's
+    # Authorization: Bearer <key> header. EventSource still uses a query key.
     supplied = request.headers.get("X-API-Key") or ""
+    authorization = request.headers.get("Authorization", "")
+    if not supplied and authorization.lower().startswith("bearer "):
+        supplied = authorization[7:].strip()
     if request.path.endswith("/events"):
         supplied = supplied or request.args.get("api_key", "") or request.args.get("key", "")
 
