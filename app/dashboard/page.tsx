@@ -8,8 +8,11 @@ type Bot = {
   runtime: string;
   status: string;
   connection_status?: string;
+  connectionStatus?: string;
   discord_username?: string | null;
+  discordUsername?: string | null;
   discord_bot_id?: string | null;
+  discordBotId?: string | null;
 };
 
 export default function Dashboard() {
@@ -94,7 +97,7 @@ export default function Dashboard() {
       }
 
       setBots(current => [data.bot, ...current]);
-      setNotice(`${data.bot.discordUsername || data.bot.name} is connected to BotVault. The token is hidden and encrypted.`);
+      setNotice(`${data.bot.discordUsername || data.bot.name}: Discord token validated and saved. A connected hosting runner is required to run it.`);
       setShowNewBot(false);
       setBotName("");
       setBotToken("");
@@ -182,11 +185,11 @@ export default function Dashboard() {
                     <div className="commandIcon">✦</div>
                     <div>
                       <strong>{bot.name}</strong>
-                      <small>{bot.discord_username || "Discord bot"} · {bot.runtime.toUpperCase()}</small>
+                      <small>{bot.discord_username || bot.discordUsername || "Discord bot"} · {bot.runtime.toUpperCase()}</small>
                     </div>
                     <div className="botRowActions">
-                      <span className={bot.connection_status === "connected" ? "statusBadge liveStatus" : "statusBadge pending"}>
-                        <i /> {bot.connection_status === "connected" ? "Connected" : "Not connected"}
+                      <span className={(bot.connection_status || bot.connectionStatus) === "connected" ? "statusBadge liveStatus" : "statusBadge pending"}>
+                        <i /> {(bot.connection_status || bot.connectionStatus) === "connected" ? "Token validated" : "Not validated"}
                       </span>
                       <a className="secondary tinyButton" href={`/dashboard/bots/${encodeURIComponent(bot.id)}`}>Open</a>
                     </div>
