@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections import deque
 import logging
 import os
 import queue
@@ -131,6 +132,19 @@ class BotInstance:
         self.stats = BotStats()
         self.retry_count = 0
         self.last_error: Optional[str] = None
+        # Keep a bounded, in-memory console history. Never log tokens or message
+        # content; only lifecycle and error metadata is recorded.
+        self.console_logs: deque[dict[str, Any]] = deque(maxlen=500)
+
+    def add_log(self, level: str, message: str) -> None:
+        entry = {
+            "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "level": level.upper() if level.upper() in {"INFO", "WARN", "ERROR"} else "INFO",
+            "message": str(message)[:500],
+        }
+        with pool_lock:
+            self.console_logs.append(entry)
+        broadcast_event(self.bot_id, {"type": "log", "log": entry})
 
     def snapshot(self) -> dict[str, Any]:
         with pool_lock:
@@ -164,6 +178,7 @@ class BotInstance:
                 daemon=True,
             )
             self.thread.start()
+        self.add_log("INFO", "Bot start requested.")
 
     def _thread_main(self) -> None:
         self.loop = asyncio.new_event_loop()
@@ -172,6 +187,7 @@ class BotInstance:
             self.loop.run_until_complete(self.run_bot())
         except Exception as exc:
             self.last_error = f"{type(exc).__name__}: runner failed"
+            self.add_log("ERROR", self.last_error)
             log.exception("bot %s runner failed", self.bot_id)
         finally:
             self.running = False
@@ -181,6 +197,7 @@ class BotInstance:
             except Exception:
                 pass
             self.loop = None
+            self.add_log("INFO", "Bot process stopped.")
             broadcast_event(self.bot_id, {"type": "stopped", "bot": self.snapshot()})
 
     async def run_bot(self) -> None:
@@ -198,11 +215,13 @@ class BotInstance:
                 reason = getattr(exc, "reason", "") or "gateway connection closed"
                 if code in FATAL_GATEWAY_CODES:
                     self.last_error = f"Discord Gateway closed ({code}). {reason}".strip()
+                    self.add_log("ERROR", self.last_error)
                     broadcast_event(self.bot_id, {"type": "error", "error": self.last_error})
                     self.running = False
                     break
                 if self.running:
                     self.last_error = f"Gateway disconnected ({code}); reconnecting"
+                    self.add_log("WARN", self.last_error)
                     broadcast_event(self.bot_id, {
                         "type": "reconnecting",
                         "error": self.last_error,
@@ -211,6 +230,7 @@ class BotInstance:
                 if not self.running:
                     break
                 self.last_error = f"{type(exc).__name__}: connection failed"
+                self.add_log("WARN", self.last_error)
                 log.warning("bot %s connection failed: %s", self.bot_id, type(exc).__name__)
                 broadcast_event(self.bot_id, {
                     "type": "reconnecting",
@@ -380,6 +400,7 @@ class BotInstance:
                 for g in (data.get("guilds") or [])
                 if g.get("id")
             }
+            self.add_log("INFO", "Discord Gateway session is ready.")
             broadcast_event(self.bot_id, {"type": "ready", "bot": self.snapshot()})
             return
 
@@ -388,6 +409,7 @@ class BotInstance:
             self.retry_count = 0
             self.last_error = None
             self.stats.uptime_start = self.stats.uptime_start or time.time()
+            self.add_log("INFO", "Discord Gateway session resumed.")
             broadcast_event(self.bot_id, {"type": "resumed", "bot": self.snapshot()})
             return
 
@@ -736,6 +758,22 @@ def get_bot(bot_id: str) -> Response:
     if not bot:
         return jsonify({"error": "Bot not found."}), 404
     return jsonify({"bot": bot.snapshot()})
+
+
+@app.get("/api/bots/<bot_id>/logs")
+def get_bot_logs(bot_id: str) -> Response:
+    """Return bounded, recent lifecycle logs without exposing secrets or message contents."""
+    try:
+        limit = int(request.args.get("limit", "100"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "limit must be an integer."}), 400
+    limit = max(1, min(limit, 200))
+    with pool_lock:
+        bot = bot_pool.get(bot_id)
+        if not bot:
+            return jsonify({"error": "Bot not found."}), 404
+        logs = list(bot.console_logs)[-limit:]
+    return jsonify({"logs": logs}), 200
 
 
 @app.post("/api/deploy")
