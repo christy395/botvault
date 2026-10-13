@@ -15,6 +15,16 @@ type RuntimeStatus = {
 };
 
 type ConsoleLog = { time: string; level: "INFO" | "WARN" | "ERROR"; message: string };
+type NodeStats = {
+  scope: "host";
+  cpuPercent: number | null;
+  memoryUsedBytes: number | null;
+  memoryTotalBytes: number | null;
+  memoryPercent: number | null;
+  diskUsedBytes: number | null;
+  diskTotalBytes: number | null;
+  diskPercent: number | null;
+};
 
 type Bot = {
   id: string;
@@ -41,6 +51,8 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
   const [runtimeError, setRuntimeError] = useState("");
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
   const [logsError, setLogsError] = useState("");
+  const [nodeStats, setNodeStats] = useState<NodeStats | null>(null);
+  const [nodeStatsError, setNodeStatsError] = useState("");
   const [botId, setBotId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -87,6 +99,20 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
         }
       } catch {
         setLogsError("Console logs are unavailable.");
+      }
+      try {
+        const nodeResponse = await fetch(`/api/bots/${encodeURIComponent(id)}/node`, { cache: "no-store" });
+        const nodeData = await nodeResponse.json();
+        if (nodeResponse.ok && nodeData.stats) {
+          setNodeStats(nodeData.stats);
+          setNodeStatsError("");
+        } else {
+          setNodeStats(null);
+          setNodeStatsError(nodeData.error || "Node metrics are unavailable.");
+        }
+      } catch {
+        setNodeStats(null);
+        setNodeStatsError("Node metrics are unavailable.");
       }
     } catch {
       if (!quiet) setError("Could not reach BotVault. Check your connection and try again.");
@@ -217,7 +243,9 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
           <article className="card profileMetric"><span>LIVE PROCESS</span><strong>{runtimeInfo ? (running ? "Running" : "Stopped") : "Unavailable"}</strong><small>{runtimeError || "Live runner status, refreshed every 10 seconds"}</small></article>
           <article className="card profileMetric"><span>BOT UPTIME</span><strong>{runtimeInfo ? formatUptime(runtimeInfo.uptime) : "—"}</strong><small>Measured by the hosting runner</small></article>
           <article className="card profileMetric"><span>GATEWAY LATENCY</span><strong>{runtimeInfo?.latencyMs != null ? `${runtimeInfo.latencyMs} ms` : "—"}</strong><small>Discord heartbeat acknowledgement</small></article>
-          <article className="card profileMetric"><span>CPU / MEMORY</span><strong>—</strong><small>Per-container metrics require container isolation and a node metrics agent</small></article>
+          <article className="card profileMetric"><span>HOST CPU</span><strong>{nodeStats?.cpuPercent != null ? `${nodeStats.cpuPercent}%` : "—"}</strong><small>{nodeStatsError || "Whole VPS host usage, not this bot alone"}</small></article>
+          <article className="card profileMetric"><span>HOST MEMORY</span><strong>{nodeStats?.memoryPercent != null ? `${nodeStats.memoryPercent}%` : "—"}</strong><small>{nodeStats?.memoryUsedBytes != null && nodeStats.memoryTotalBytes != null ? `${(nodeStats.memoryUsedBytes / 1073741824).toFixed(2)} / ${(nodeStats.memoryTotalBytes / 1073741824).toFixed(2)} GiB used` : "Waiting for Linux host metrics"}</small></article>
+          <article className="card profileMetric"><span>HOST DISK</span><strong>{nodeStats?.diskPercent != null ? `${nodeStats.diskPercent}%` : "—"}</strong><small>{nodeStats?.diskUsedBytes != null && nodeStats.diskTotalBytes != null ? `${(nodeStats.diskUsedBytes / 1073741824).toFixed(1)} / ${(nodeStats.diskTotalBytes / 1073741824).toFixed(1)} GiB used` : "Waiting for Linux host metrics"}</small></article>
         </div>
 
         <div className="botProfileGrid">
