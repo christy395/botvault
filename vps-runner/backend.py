@@ -6,6 +6,7 @@ from collections import deque
 import logging
 import os
 import queue
+import shutil
 import threading
 import time
 import uuid
@@ -620,6 +621,76 @@ def dashboard_page() -> Response:
     return send_from_directory(DASHBOARD_DIR, DASHBOARD_FILE)
 
 
+
+def read_cpu_counters() -> Optional[tuple[int, int]]:
+    """Read Linux aggregate CPU counters; return (busy, total) ticks."""
+    try:
+        with open("/proc/stat", "r", encoding="utf-8") as handle:
+            fields = handle.readline().split()
+        if not fields or fields[0] != "cpu":
+            return None
+        values = [int(value) for value in fields[1:]]
+        if len(values) < 4:
+            return None
+        idle = values[3] + (values[4] if len(values) > 4 else 0)
+        total = sum(values)
+        return total - idle, total
+    except (OSError, ValueError):
+        return None
+
+
+def read_node_stats() -> dict[str, Any]:
+    """Return host-level metrics only; these are not per-bot container metrics."""
+    cpu_before = read_cpu_counters()
+    time.sleep(0.12)
+    cpu_after = read_cpu_counters()
+    cpu_percent = None
+    if cpu_before and cpu_after:
+        busy_delta = cpu_after[0] - cpu_before[0]
+        total_delta = cpu_after[1] - cpu_before[1]
+        if total_delta > 0:
+            cpu_percent = round(max(0.0, min(100.0, busy_delta * 100.0 / total_delta)), 1)
+
+    memory_total = memory_available = None
+    try:
+        meminfo: dict[str, int] = {}
+        with open("/proc/meminfo", "r", encoding="utf-8") as handle:
+            for line in handle:
+                key, _, rest = line.partition(":")
+                parts = rest.strip().split()
+                if parts and key in {"MemTotal", "MemAvailable"}:
+                    meminfo[key] = int(parts[0]) * 1024
+        memory_total = meminfo.get("MemTotal")
+        memory_available = meminfo.get("MemAvailable")
+    except (OSError, ValueError):
+        pass
+
+    disk_total = disk_used = None
+    try:
+        usage = shutil.disk_usage(DATA_FILE.parent.resolve())
+        disk_total = usage.total
+        disk_used = usage.used
+    except OSError:
+        pass
+
+    memory_used = (
+        max(0, memory_total - memory_available)
+        if memory_total is not None and memory_available is not None else None
+    )
+    return {
+        "scope": "host",
+        "cpuPercent": cpu_percent,
+        "memoryUsedBytes": memory_used,
+        "memoryTotalBytes": memory_total,
+        "memoryPercent": round(memory_used * 100.0 / memory_total, 1)
+        if memory_used is not None and memory_total else None,
+        "diskUsedBytes": disk_used,
+        "diskTotalBytes": disk_total,
+        "diskPercent": round(disk_used * 100.0 / disk_total, 1)
+        if disk_used is not None and disk_total else None,
+    }
+
+
 @app.get("/api/health")
 def health() -> Response:
     # Fix 17: Read bot_pool while holding pool_lock.
@@ -742,6 +813,11 @@ def bot_action() -> Response:
         "status": "stopped",
         "bot": bot.snapshot(),
     })
+
+
+@app.get("/api/node/stats")
+def get_node_stats() -> Response:
+    return jsonify({"stats": read_node_stats()}), 200
 
 
 @app.get("/api/bots")
