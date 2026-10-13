@@ -77,7 +77,7 @@ export default function Home() {
       <section id="faq" className="section faq">
         <div className="sectionHead"><span>04 / FAQ</span><h2>Questions, answered.</h2></div>
         <details><summary>Is BotVault really free?</summary><p>The application is designed around a ₹0/$0 Free Forever plan. Actual capacity depends on the hosting nodes connected to the platform.</p></details>
-        <details><summary>Can Cloudflare run my Discord bot?</summary><p>Cloudflare hosts the web application and API edge. Long-running Discord bot processes belong on dedicated hosting nodes, typically isolated with Docker.</p></details>
+        <details><summary>Where do my Discord bots run?</summary><p>The website manages your bots, while dedicated hosting nodes run their code. Each bot should run in an isolated container with appropriate resource limits.</p></details>
         <details><summary>Are Discord tokens protected?</summary><p>The production architecture requires tokens to remain server-side and protected. They must never be placed in public URLs, browser logs, analytics, or normal API responses.</p></details>
       </section>
 
