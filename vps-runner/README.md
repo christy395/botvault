@@ -95,3 +95,8 @@ The runner keeps a bounded in-memory history of the latest 500 lifecycle events 
 Current events cover start requests, Discord Gateway readiness/resume, reconnect warnings, connection failures, and process stops. They deliberately exclude Discord message content and credentials. Logs are in memory and reset when the runner restarts; they are not arbitrary project stdout/stderr because uploaded project execution is not implemented yet.
 
 The bot dashboard refreshes status and recent logs periodically. A live per-container console requires the future isolated project-worker runtime.
+
+
+## Host metrics
+
+Authenticated `GET /api/node/stats` returns Linux host CPU, memory, and disk usage. CPU usage is sampled over a short interval; memory is read from `/proc/meminfo`; disk capacity is measured for the configured bot data path. These are node-wide measurements and must not be presented as per-bot/container resource usage. The endpoint reports unavailable values as `null` when the operating-system counters cannot be read.
