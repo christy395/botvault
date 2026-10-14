@@ -191,6 +191,8 @@ export default function Dashboard() {
                       <span className={(bot.connection_status || bot.connectionStatus) === "connected" ? "statusBadge liveStatus" : "statusBadge pending"}>
                         <i /> {(bot.connection_status || bot.connectionStatus) === "connected" ? "Token validated" : "Not validated"}
                       </span>
+                      <a className="secondary tinyButton" href={`/dashboard/commands?botId=${encodeURIComponent(bot.id)}`}>Command Builder</a>
+                      <a className="secondary tinyButton" href={`/dashboard/commands?botId=${encodeURIComponent(bot.id)}&mode=code`}>Build with Coding</a>
                       <a className="secondary tinyButton" href={`/dashboard/bots/${encodeURIComponent(bot.id)}`}>Open</a>
                     </div>
                   </div>
