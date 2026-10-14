@@ -19,25 +19,55 @@ export default function CommandsPage() {
   const [prompt, setPrompt] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [storageKey, setStorageKey] = useState("botvault.commands");
+  const [botId, setBotId] = useState("");
+  const [botName, setBotName] = useState("");
+  const [codeDraft, setCodeDraft] = useState("");
+  const [codingMode, setCodingMode] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const scopedBotId = params.get("botId") || "";
+    const requestedMode = params.get("mode") === "code";
+    setBotId(scopedBotId);
+    setCodingMode(requestedMode);
+    const key = scopedBotId ? `botvault.commands.${scopedBotId}` : "botvault.commands";
+    setStorageKey(key);
+    if (scopedBotId) {
+      fetch(`/api/bots/${encodeURIComponent(scopedBotId)}`, { cache: "no-store" })
+        .then(async (response) => {
+          const data = await response.json();
+          if (response.ok && data.bot?.name) setBotName(data.bot.name);
+        })
+        .catch(() => undefined);
+    }
     try {
-      const saved = window.localStorage.getItem("botvault.commands");
+      const saved = window.localStorage.getItem(key);
       const parsed: BotCommand[] = saved ? JSON.parse(saved) : [];
-      const withoutDefaultPing = Array.isArray(parsed)
-        ? parsed.filter((command) => command?.name?.toLowerCase() !== "ping")
-        : [];
-      setCommands(withoutDefaultPing);
-      window.localStorage.setItem("botvault.commands", JSON.stringify(withoutDefaultPing));
+      const validCommands = Array.isArray(parsed) ? parsed.filter((command) => command && command.name) : [];
+      setCommands(validCommands);
+      window.localStorage.setItem(key, JSON.stringify(validCommands));
     } catch {
       setCommands([]);
-      window.localStorage.setItem("botvault.commands", "[]");
+      window.localStorage.setItem(key, "[]");
     }
   }, []);
 
+  useEffect(() => {
+    setCodeDraft(selected?.code || "");
+  }, [selected]);
+
   const saveCommands = (next: BotCommand[]) => {
     setCommands(next);
-    window.localStorage.setItem("botvault.commands", JSON.stringify(next));
+    window.localStorage.setItem(storageKey, JSON.stringify(next));
+  };
+
+  const saveCode = () => {
+    if (!selected) return;
+    const updated = { ...selected, code: codeDraft };
+    saveCommands(commands.map((command) => command.id === selected.id ? updated : command));
+    setSelected(updated);
+    flash("Code saved in this browser's command library.");
   };
 
   const flash = (message: string) => {
@@ -109,13 +139,42 @@ export default function CommandsPage() {
         <div className="dashboardHeader">
           <div>
             <span className="eyebrow dashboardEyebrow"><span /> COMMAND BUILDER</span>
-            <h1>Build your bot commands.</h1>
-            <p>Create slash commands yourself or describe what you want and let the AI generate a starting implementation.</p>
+            <h1>{botName ? `Build commands for ${botName}.` : "Build your bot commands."}</h1>
+            <p>Create commands visually, ask AI for a starter, or switch to coding mode and write Python or JavaScript yourself. {botId ? "This command library is scoped to the selected bot in this browser." : "Choose a bot profile to keep commands separated by bot."}</p>
           </div>
-          <a className="secondary" href="/dashboard">← Dashboard</a>
+          <div className="commandBuilderShortcutActions">
+            <button className={codingMode ? "secondary" : "primary"} onClick={() => setCodingMode(false)}>Visual Builder</button>
+            <button className={codingMode ? "primary" : "secondary"} onClick={() => setCodingMode(true)}>{"</>"} Build with Coding</button>
+            <a className="secondary" href={botId ? `/dashboard/bots/${encodeURIComponent(botId)}` : "/dashboard"}>← {botId ? "Bot profile" : "Dashboard"}</a>
+          </div>
         </div>
 
         {notice && <div className="dashboardNotice" role="status"><span>!</span>{notice}</div>}
+
+        {codingMode && (
+          <section className="codePanel card codingModePanel">
+            <div className="dashboardCardHead">
+              <div><span className="dashboardLabel">CODE EDITOR</span><h2>Build with code</h2></div>
+              <label className="codingRuntimeLabel">Language
+                <select value={language} onChange={(event) => setLanguage(event.target.value as BotCommand["language"])}>
+                  <option value="python">Python / discord.py</option>
+                  <option value="javascript">JavaScript / discord.js</option>
+                </select>
+              </label>
+            </div>
+            <p className="helperText">Select a command from your library below to edit its source, or create a command first. This editor saves code in this browser; it does not execute or deploy code to a live bot yet.</p>
+            {selected ? (
+              <>
+                <div className="codingSelectedMeta"><strong>/{selected.name}</strong><span>{selected.language === "python" ? "Python" : "JavaScript"}</span></div>
+                <textarea className="codeEditorTextarea" aria-label="Command source code" spellCheck={false} value={codeDraft} onChange={(event) => setCodeDraft(event.target.value)} />
+                <div className="codingEditorActions">
+                  <button className="primary" onClick={saveCode}>Save code</button>
+                  <button className="secondary" onClick={() => navigator.clipboard?.writeText(codeDraft).then(() => flash("Code copied."))}>Copy code</button>
+                </div>
+              </>
+            ) : <div className="emptyState"><div className="emptyIcon">{"</>"}</div><h3>Select or create a command</h3><p>Choose a command from the library below to edit its code.</p></div>}
+          </section>
+        )}
 
         <div className="commandWorkspace">
           <section className="commandPanel card">
@@ -161,7 +220,8 @@ export default function CommandsPage() {
               <button className="secondary smallButton" onClick={() => navigator.clipboard?.writeText(selected.code).then(() => flash("Command code copied."))}>Copy code</button>
             </div>
             <p className="codeDescription">{selected.description}</p>
-            <pre><code>{selected.code}</code></pre>
+            {!codingMode && <pre><code>{selected.code}</code></pre>}
+            {codingMode && <button className="secondary smallButton" onClick={() => setCodeDraft(selected.code)}>Reset editor to saved code</button>}
             <div className="integrationNote"><strong>Deployment:</strong> Commands are saved to this browser while the BotVault hosting controller is not connected. Once a bot node/API is connected, this command library can be synced into the bot runtime instead of pretending a deployment happened.</div>
           </section>
         )}
