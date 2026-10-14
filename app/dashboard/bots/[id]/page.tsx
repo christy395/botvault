@@ -239,6 +239,18 @@ export default function BotProfile({ params }: { params: Promise<{ id: string }>
           </div>
         </section>
 
+        <section className="card commandBuilderShortcut">
+          <div className="commandBuilderShortcutCopy">
+            <span className="dashboardLabel">BOT CUSTOMIZATION</span>
+            <h2>Build commands for {bot.name}</h2>
+            <p>Create commands visually, generate a starter with AI, or open the code editor to write Python or JavaScript yourself.</p>
+          </div>
+          <div className="commandBuilderShortcutActions">
+            <a className="primary" href={`/dashboard/commands?botId=${encodeURIComponent(bot.id)}`}>✦ Command Builder</a>
+            <a className="secondary" href={`/dashboard/commands?botId=${encodeURIComponent(bot.id)}&mode=code`}>{"</>"} Build with Coding</a>
+          </div>
+        </section>
+
         <div className="profileMetricsGrid">
           <article className="card profileMetric"><span>LIVE PROCESS</span><strong>{runtimeInfo ? (running ? "Running" : "Stopped") : "Unavailable"}</strong><small>{runtimeError || "Live runner status, refreshed every 10 seconds"}</small></article>
           <article className="card profileMetric"><span>BOT UPTIME</span><strong>{runtimeInfo ? formatUptime(runtimeInfo.uptime) : "—"}</strong><small>Measured by the hosting runner</small></article>
