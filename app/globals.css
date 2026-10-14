@@ -88,3 +88,23 @@ input,textarea,select{accent-color:#a855f7}
 .consoleEmpty,.consoleFootnote{color:#9295ad;font-size:12px;line-height:1.7}
 .consoleFootnote{margin:12px 0 0;font-size:10px}
 @media(max-width:520px){.botConsoleCard{padding:15px}.consoleLine{grid-template-columns:65px 45px minmax(0,1fr);gap:6px;font-size:10px}.botConsoleHeader{align-items:flex-start}}
+
+
+/* Per-bot command builder and coding workspace */
+.commandBuilderShortcut{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:18px 0;padding:25px;border-color:rgba(34,211,238,.22);background:linear-gradient(115deg,rgba(139,92,246,.1),rgba(8,145,178,.07),rgba(8,10,18,.92))}
+.commandBuilderShortcutCopy{min-width:0}
+.commandBuilderShortcut h2{margin:9px 0;font-size:23px;letter-spacing:-.03em}
+.commandBuilderShortcut p{max-width:720px;margin:0;color:#9da0b8;font-size:13px;line-height:1.7}
+.commandBuilderShortcutActions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px;flex-shrink:0}
+.commandBuilderShortcutActions a,.commandBuilderShortcutActions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;white-space:nowrap;cursor:pointer;font:inherit;font-size:12px;font-weight:800}
+.commandsShell .dashboardHeader{align-items:center}
+.codingModePanel{margin-bottom:18px;padding:24px}
+.codingRuntimeLabel{display:flex;align-items:center;gap:10px;color:#9295ad;font-size:11px;font-weight:700}
+.codingRuntimeLabel select{border:1px solid rgba(168,85,247,.3);border-radius:9px;background:#0a0b14;color:#f7f7ff;padding:10px;font:inherit}
+.codingSelectedMeta{display:flex;align-items:center;gap:12px;margin:16px 0;color:#e9e5ff;font-size:13px}
+.codingSelectedMeta span{border:1px solid rgba(34,211,238,.2);border-radius:999px;padding:5px 9px;color:#67e8f9;font-size:10px}
+.codeEditorTextarea{display:block;width:100%;min-height:340px;resize:vertical;border:1px solid rgba(139,92,246,.3);border-radius:12px;background:#050711;color:#d8f5ff;padding:18px;font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;tab-size:4;outline:none}
+.codeEditorTextarea:focus{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.08)}
+.codingEditorActions{display:flex;flex-wrap:wrap;gap:10px;margin-top:13px}
+@media(max-width:800px){.commandBuilderShortcut{align-items:flex-start;flex-direction:column}.commandBuilderShortcutActions{justify-content:flex-start;width:100%}.commandsShell .dashboardHeader{align-items:flex-start;flex-direction:column}.codingModePanel{padding:17px}.codeEditorTextarea{min-height:260px;font-size:12px}}
+@media(max-width:480px){.commandBuilderShortcutActions{display:grid;grid-template-columns:1fr;width:100%}.commandBuilderShortcutActions a,.commandBuilderShortcutActions button{width:100%}.codingRuntimeLabel{align-items:flex-start;flex-direction:column}.codingRuntimeLabel select{width:100%}}
