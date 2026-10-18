@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
 import { getCloudflareEnv, getDb } from "@/lib/cloudflare";
 import { encryptBotToken } from "@/lib/bot-token";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 type DiscordBotUser = {
   id: string;
@@ -36,6 +37,14 @@ export async function POST(request: Request) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
+    const env = await getCloudflareEnv();
+    if (!env.TURNSTILE_SECRET_KEY) {
+      return NextResponse.json({ error: "Security verification is not configured. Please contact the site owner." }, { status: 503 });
+    }
+    if (!(await verifyTurnstile(body.challengeToken, request))) {
+      return NextResponse.json({ error: "Security verification failed. Please complete the challenge and try again." }, { status: 403 });
+    }
+
     const name = String(body.name || "").trim().slice(0, 80);
     const token = String(body.token || "").trim();
     const runtime = body.runtime === "node" ? "node" : "python";
