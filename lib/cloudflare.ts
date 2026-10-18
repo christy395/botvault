@@ -4,6 +4,8 @@ import type { D1Database } from "@cloudflare/workers-types";
 type BotVaultEnv = {
   DB?: D1Database;
   BOT_TOKEN_ENCRYPTION_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
+  TURNSTILE_HOSTNAME?: string;
 };
 
 async function ensureSchema(db: D1Database) {
@@ -75,7 +77,9 @@ export async function getCloudflareEnv(): Promise<BotVaultEnv> {
     DB: context.DB,
     BOT_TOKEN_ENCRYPTION_KEY:
       context.BOT_TOKEN_ENCRYPTION_KEY ||
-      processEnv?.BOT_TOKEN_ENCRYPTION_KEY
+      processEnv?.BOT_TOKEN_ENCRYPTION_KEY,
+    TURNSTILE_SECRET_KEY: context.TURNSTILE_SECRET_KEY || processEnv?.TURNSTILE_SECRET_KEY,
+    TURNSTILE_HOSTNAME: context.TURNSTILE_HOSTNAME || processEnv?.TURNSTILE_HOSTNAME
   };
 }
 
