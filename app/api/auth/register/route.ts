@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import { createSession, hashPassword, sessionCookie } from "@/lib/auth";
-import { getDb } from "@/lib/cloudflare";
+import { getCloudflareEnv, getDb } from "@/lib/cloudflare";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
+
+    const env = await getCloudflareEnv();
+    if (!env.TURNSTILE_SECRET_KEY) {
+      return NextResponse.json({ error: "Security verification is not configured. Please contact the site owner." }, { status: 503 });
+    }
+    if (!(await verifyTurnstile(body.challengeToken, request))) {
+      return NextResponse.json({ error: "Security verification failed. Please try again." }, { status: 403 });
+    }
 
     if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) {
       return NextResponse.json(
