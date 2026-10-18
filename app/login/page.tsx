@@ -1,10 +1,9 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -14,12 +13,12 @@ export default function LoginPage() {
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    const status = searchParams.get("verified");
+    const status = new URLSearchParams(window.location.search).get("verified");
     if (status === "success") setNotice("Email verified! You can now sign in.");
     else if (status === "expired") setError("That verification link expired. Sign in with your email and request a new link.");
     else if (status === "invalid") setError("That verification link is invalid.");
     else if (status === "error") setError("We couldn't verify your email right now. Please try again.");
-  }, [searchParams]);
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
