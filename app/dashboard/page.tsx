@@ -1,5 +1,7 @@
 "use client";
 
+import Turnstile from "@/components/Turnstile";
+
 import { useEffect, useState } from "react";
 
 type Bot = {
@@ -25,6 +27,8 @@ export default function Dashboard() {
   const [botToken, setBotToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [formError, setFormError] = useState("");
+  const [challengeToken, setChallengeToken] = useState("");
+  const [challengeResetKey, setChallengeResetKey] = useState(0);
 
   async function load() {
     const me = await fetch("/api/auth/me");
@@ -55,6 +59,8 @@ export default function Dashboard() {
     setBotName("");
     setBotToken("");
     setShowToken(false);
+    setChallengeToken("");
+    setChallengeResetKey(value => value + 1);
     setShowNewBot(true);
   }
 
@@ -76,6 +82,11 @@ export default function Dashboard() {
       return;
     }
 
+    if (!challengeToken) {
+      setFormError("Complete the security verification first.");
+      return;
+    }
+
     setBusy(true);
 
     try {
@@ -85,11 +96,14 @@ export default function Dashboard() {
         body: JSON.stringify({
           name: botName.trim(),
           token: botToken.trim(),
-          runtime: "python"
+          runtime: "python",
+          challengeToken
         })
       });
 
       const data = await response.json();
+      setChallengeToken("");
+      setChallengeResetKey(value => value + 1);
 
       if (!response.ok) {
         setFormError(data.error || "Could not connect the Discord bot.");
@@ -284,9 +298,11 @@ export default function Dashboard() {
               </div>
             </label>
 
+            <div className="turnstileWrap"><Turnstile resetKey={challengeResetKey} onToken={setChallengeToken} /></div>
+
             {formError && <div className="modalError"><span>!</span>{formError}</div>}
 
-            <button className="primary modalCreateButton" onClick={createBot} disabled={busy}>
+            <button className="primary modalCreateButton" onClick={createBot} disabled={busy || !challengeToken}>
               {busy ? "Connecting..." : "Connect bot"}
             </button>
 
