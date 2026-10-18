@@ -4,6 +4,9 @@ import type { D1Database } from "@cloudflare/workers-types";
 type BotVaultEnv = {
   DB?: D1Database;
   BOT_TOKEN_ENCRYPTION_KEY?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
+  APP_URL?: string;
 };
 
 async function ensureSchema(db: D1Database) {
@@ -44,10 +47,22 @@ async function ensureSchema(db: D1Database) {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `),
-    db.prepare("CREATE INDEX IF NOT EXISTS idx_bots_user_id ON bots(user_id)")
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_bots_user_id ON bots(user_id)"),
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS email_verification_tokens (
+        user_id TEXT PRIMARY KEY,
+        token_hash TEXT NOT NULL UNIQUE,
+        expires_at TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_email_verification_expiry ON email_verification_tokens(expires_at)")
   ]);
 
+  // These ALTER statements keep existing D1 databases compatible with new columns.
   for (const statement of [
+    "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE bots ADD COLUMN connection_status TEXT NOT NULL DEFAULT 'disconnected'",
     "ALTER TABLE bots ADD COLUMN discord_bot_id TEXT",
     "ALTER TABLE bots ADD COLUMN discord_username TEXT",
@@ -75,7 +90,10 @@ export async function getCloudflareEnv(): Promise<BotVaultEnv> {
     DB: context.DB,
     BOT_TOKEN_ENCRYPTION_KEY:
       context.BOT_TOKEN_ENCRYPTION_KEY ||
-      processEnv?.BOT_TOKEN_ENCRYPTION_KEY
+      processEnv?.BOT_TOKEN_ENCRYPTION_KEY,
+    RESEND_API_KEY: context.RESEND_API_KEY || processEnv?.RESEND_API_KEY,
+    EMAIL_FROM: context.EMAIL_FROM || processEnv?.EMAIL_FROM,
+    APP_URL: context.APP_URL || processEnv?.APP_URL,
   };
 }
 
