@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import Turnstile from "@/components/Turnstile";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -9,20 +10,29 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [challengeToken, setChallengeToken] = useState("");
+  const [challengeResetKey, setChallengeResetKey] = useState(0);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError("");
+    if (!challengeToken) {
+      setError("Complete the security verification first.");
+      setBusy(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, challengeToken }),
       });
 
       const data = await res.json().catch(() => ({}));
+      setChallengeToken("");
+      setChallengeResetKey(value => value + 1);
 
       if (!res.ok) {
         setError(
@@ -60,9 +70,11 @@ export default function RegisterPage() {
             <input type="password" minLength={8} value={password} onChange={e => setPassword(e.target.value)} required />
           </label>
 
+          <div className="turnstileWrap"><Turnstile resetKey={challengeResetKey} onToken={setChallengeToken} /></div>
+
           {error && <div className="dashboardNotice"><span>!</span>{error}</div>}
 
-          <button className="primary" disabled={busy}>
+          <button className="primary" disabled={busy || !challengeToken}>
             {busy ? "Creating..." : "Create account"} <b>→</b>
           </button>
         </form>
